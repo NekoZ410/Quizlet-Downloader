@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>(Extension Name)</title>
+        <style>
+            /* core: global styles */
+            :root {
+                --clr-fg-white: whitesmoke;
+                --clr-fg-black: black;
+                --clr-bg-dark: rgba(25, 25, 35, 1);
+                --clr-bg-dark2: rgba(55, 55, 60, 1);
+                --btn-red: crimson;
+                --btn-red-hover: brown;
+                --btn-green: forestgreen;
+                --btn-green-hover: darkgreen;
+                --btn-blue: dodgerblue;
+                --btn-blue-hover: royalblue;
+            }
+
+            /* core: body */
+            body {
+                padding: 10px;
+                margin: 10px;
+                font-family: consolas;
+                text-align: center;
+                border: 1px solid var(--clr-fg-white);
+                color: var(--clr-fg-white);
+                background-color: var(--clr-bg-dark);
+                width: fit-content;
+                min-width: 600px;
+                max-width: 600px;
+            }
+
+            /* core: info */
+            .info h2 {
+                margin: 10px 0;
+            }
+
+            .info h2 a {
+                text-decoration: none;
+                color: inherit;
+            }
+
+            /* core: groups */
+            .groups {
+                /* max-height: 600px; */
+                overflow-y: auto;
+            }
+
+            .groups::-webkit-scrollbar {
+                width: 5px;
+            }
+
+            .groups::-webkit-scrollbar-thumb {
+                background-color: gray;
+            }
+
+            .groups::-webkit-scrollbar-thumb:hover {
+                background-color: lightgray;
+            }
+
+            /* core: group */
+            .group {
+                flex-direction: column;
+                gap: 8px;
+                margin: 0 0 10px 0;
+                text-align: left;
+                display: flex;
+            }
+
+            /* group: type */
+            .type {
+                margin: 0.5em 2em;
+            }
+
+            .status {
+                margin: 0.5em 2em;
+                color: green;
+            }
+
+            .status-details {
+                margin: 0 2em;
+                text-align: left;
+                font-size: 12px;
+                background: var(--clr-bg-dark2);
+                padding: 10px;
+                border-radius: 5px;
+                white-space: pre-wrap;
+                color: coral;
+                display: none;
+            }
+
+            /* group: segment */
+            .group-segment-item {
+                gap: 8px;
+                font-size: 15px;
+                /* only margin when needed */
+                /* margin: 0 2em; */
+                align-items: center;
+                display: flex;
+                width: fit-content;
+            }
+
+            .group-segment-button {
+                gap: 8px;
+                font-size: 15px;
+                margin: 0 2em;
+                align-items: center;
+                justify-content: center;
+                display: flex;
+                width: calc(100% - 4em);
+            }
+
+            .group-segment-input {
+                gap: 8px;
+                font-size: 15px;
+                margin: 0 2em;
+                align-items: center;
+                justify-content: center;
+                display: flex;
+                width: calc(100% - 4em);
+            }
+
+            /* group: input */
+            input[type="text"],
+            input[type="number"] {
+                vertical-align: middle;
+                width: 50px;
+                height: 20px;
+            }
+
+            input[type="color"] {
+                vertical-align: middle;
+                width: 30px;
+                height: 30px;
+            }
+
+            .input-full {
+                border: none;
+                padding: 0 0.5em;
+                border-radius: 5px;
+                width: 100%;
+                height: 25px;
+            }
+
+            /* group: guide button */
+            .btn-guide {
+                border: none;
+                border-radius: 25px;
+                cursor: pointer;
+                vertical-align: middle;
+                font-size: xx-small;
+                padding: 5px;
+                color: black;
+                background-color: whitesmoke;
+                min-width: 20px;
+                min-height: 20px;
+
+                :disabled {
+                    color: black;
+                    background-color: whitesmoke;
+                }
+            }
+
+            /* group: action button */
+            .btn-action-fit {
+                padding: 10px;
+                background-color: var(--btn-green);
+                color: white;
+                border: none;
+                cursor: pointer;
+                border-radius: 5px;
+                font-family: inherit;
+                font-weight: bold;
+
+                :hover {
+                    background-color: var(--btn-green-hover);
+                }
+            }
+
+            .btn-action-full {
+                padding: 10px;
+                background-color: var(--btn-blue);
+                color: white;
+                border: none;
+                cursor: pointer;
+                border-radius: 5px;
+                font-family: inherit;
+                font-weight: bold;
+                width: 100%;
+
+                :hover {
+                    background-color: var(--btn-blue-hover);
+                }
+            }
+        </style>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
+    </head>
+
+    <body>
+        <div class="container">
+            <div class="info">
+                <h2>
+                    <span id="ext-name">(Extension Name)</span> v<span id="ext-ver">(Extension Version)</span>
+                    <a id="ext-repo" href="#" target="_blank"><i class="fa-brands fa-github"></i></a>
+                </h2>
+            </div>
+            <hr />
+
+            <div class="groups">
+                <section class="group">
+                    <h4 class="type">
+                        Filename Pattern:
+                        <button class="btn-guide"
+                            title="Custom placeholder:&#10;- {quizSetTitle}: quiz set title&#10;- {swapState}: Small part/big part swapping order&#10;&#10;This project use 'moment-with-locales.js' version,&#10;visit https://momentjs.com/docs/ for more information"
+                            disabled><i class="fa-solid fa-info"></i></button>
+                    </h4>
+                    <div class="group-segment-input">
+                        <input id="qd-outFileNamePattern" class="input-full" value="{quizSetTitle}_YYYY-MM-DD_HH-mm-ss_{swapState}"
+                            placeholder="Default: {quizSetTitle}_YYYY-MM-DD_HH-mm-ss_{swapState}" />
+                    </div>
+                    <br>
+
+                    <div class="group-segment-item">
+                        <span style="margin: 0 0 0 2em">Output Format:</span>
+                        <select id="qd-outFileNameExt">
+                            <option value="json">JSON</option>
+                            <option value="csv">CSV</option>
+                            <option value="docx">DOCX</option>
+                        </select>
+                    </div>
+                    <div class="group-segment-item">
+                        <input type="checkbox" id="qd-outFileContentOrder">Swap small part/big part position
+                        <button class="btn-guide" title="Default: false (small first, big later)" disabled><i class="fa-solid fa-info"></i></button>
+                    </div>
+                    <br>
+
+                    <div class="group-segment-button">
+                        <button id="qd-scrapeBtn" class="btn-action-full"><i class="fa-solid fa-download"></i> Scrape & Download</button>
+                    </div>
+                </section>
+
+                <section class="group">
+                    <h4 id="qd-status" class="status">Ready to scrape.</h4>
+                </section>
+
+                <!-- <section class="group">
+                    <h4 class="type"></h4>
+                    <div class="group-segment-button">
+                        <input type="checkbox" id="xxx-checkbox" /> Checkbox 01
+                        <button class="btn-guide" title="Hover to see guide" disabled><i class="fa-solid fa-info"></i></button>
+                    </div>
+                </section> -->
+            </div>
+        </div>
+
+        <script src="libs/moment_2.30.1/moment-with-locales.js"></script>
+        <script src="libs/docx_8.8.2/docx.js"></script>
+        <script src="popup.js"></script>
+    </body>
+
+</html>
