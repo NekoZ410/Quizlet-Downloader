@@ -10,28 +10,70 @@
     if (repoLink && manifest.homepage_url) repoLink.href = manifest.homepage_url; // extension repo URL
 })();
 
-// global: process scraping and download result
-const statusDisplay = document.getElementById("qd-status");
+// global: selectors
+const scrapeStatus = document.getElementById("qd-status");
 const scrapeBtn = document.getElementById("qd-scrapeBtn");
+const imgCheckbox = document.getElementById("qd-outFileIncludeImage");
 const swapCheckbox = document.getElementById("qd-outFileContentOrder");
 const filenameInput = document.getElementById("qd-outFileNamePattern");
 const formatSelect = document.getElementById("qd-outFileNameExt");
+const formatEnableCheckbox = document.getElementById("qd-enableCustomFormat");
 
+// global: load saved configuration from storage
+document.addEventListener("DOMContentLoaded", () => {
+    chrome.storage.local.get(["savedFilenamePattern", "savedOutputFormat", "savedIncludeImage", "savedSwapState"], (result) => {
+        if (result.savedFilenamePattern) filenameInput.value = result.savedFilenamePattern;
+        if (result.savedOutputFormat) formatSelect.value = result.savedOutputFormat;
+        if (result.savedIncludeImage !== undefined) imgCheckbox.checked = result.savedIncludeImage;
+        if (result.savedSwapState !== undefined) swapCheckbox.checked = result.savedSwapState;
+        if (result.savedEnableCustomFormat !== undefined) {
+            formatEnableCheckbox.checked = result.savedEnableCustomFormat;
+            toggleFormatSelect();
+        }
+    });
+});
+
+// global: save configuration to storage
+function saveOptions() {
+    chrome.storage.local.set({
+        savedFilenamePattern: filenameInput.value,
+        savedOutputFormat: formatSelect.value,
+        savedIncludeImage: imgCheckbox.checked,
+        savedSwapState: swapCheckbox.checked,
+        savedEnableCustomFormat: formatEnableCheckbox.checked,
+    });
+}
+
+function toggleFormatSelect() {
+    formatSelect.disabled = !formatEnableCheckbox.checked;
+}
+
+filenameInput.addEventListener("input", saveOptions);
+formatSelect.addEventListener("change", saveOptions);
+imgCheckbox.addEventListener("change", saveOptions);
+swapCheckbox.addEventListener("change", saveOptions);
+formatEnableCheckbox.addEventListener("change", () => {
+    toggleFormatSelect();
+    saveOptions();
+});
+
+// global: process scraping and download result
 if (scrapeBtn) {
     scrapeBtn.addEventListener("click", async () => {
         let [tab] = await chrome.tabs.query({ active: true, currentWindow: true }); // get current active tab
 
         // validate Quizlet page URL
         if (!tab.url.includes("quizlet.com")) {
-            statusDisplay.textContent = "Error: Please open a Quizlet set page.";
-            statusDisplay.style.color = "crimson";
+            scrapeStatus.textContent = "Error: Please open a Quizlet set page.";
+            scrapeStatus.style.color = "crimson";
             return;
         }
 
-        statusDisplay.textContent = "Scraping data...";
-        statusDisplay.style.color = "yellow";
+        scrapeStatus.textContent = "Scraping data...";
+        scrapeStatus.style.color = "yellow";
 
         const isSwapped = swapCheckbox ? swapCheckbox.checked : false; // check swap option status
+        const includeImg = imgCheckbox ? imgCheckbox.checked : true; // check image option status
 
         try {
             const response = await chrome.tabs.sendMessage(tab.id, {
@@ -41,24 +83,24 @@ if (scrapeBtn) {
 
             if (response && response.status === "success") {
                 const payload = response.payload;
-                const outputFormat = formatSelect ? formatSelect.value : "json";
+                const outputFormat = formatEnableCheckbox.checked ? formatSelect.value : "json";
 
                 const filenamePattern = filenameInput ? filenameInput.value : "{quizSetTitle}_YYYY-MM-DD_HH-mm-ss_{swapState}";
                 const finalFilename = generateFilename(filenamePattern, payload.info, outputFormat);
 
-                const { content, mimeType } = await formatData(payload, outputFormat);
+                const { content, mimeType } = await formatData(payload, outputFormat, includeImg);
                 await downloadFile(content, finalFilename, mimeType);
 
-                statusDisplay.textContent = `Done! Found ${payload.info.numberOfQuizzes} quizzes.`;
-                statusDisplay.style.color = "forestgreen";
+                scrapeStatus.textContent = `Done! Found ${payload.info.numberOfQuizzes} quizzes.`;
+                scrapeStatus.style.color = "forestgreen";
             } else {
-                statusDisplay.textContent = "Error: No data found or script failed.";
-                statusDisplay.style.color = "crimson";
+                scrapeStatus.textContent = "Error: No data found or script failed.";
+                scrapeStatus.style.color = "crimson";
             }
         } catch (error) {
             console.error(error);
-            statusDisplay.textContent = "Error: Page not ready or blocked.";
-            statusDisplay.style.color = "crimson";
+            scrapeStatus.textContent = "Error: Page not ready or blocked.";
+            scrapeStatus.style.color = "crimson";
         }
     });
 }
@@ -69,11 +111,14 @@ function generateFilename(pattern, info, extension) {
     let resultName = moment().format(protectedPattern);
 
     // process {quizSetTitle}
-    const safeQuizSetTitle = (info.quizSetTitle || "quizlet_set").replace(/\s+/g, "_");
-    resultName = resultName.replace("{quizSetTitle}", safeQuizSetTitle);
+    let rawTitle = info.quizSetTitle || "quizlet_set";
+    rawTitle = rawTitle.replace(/\s+/g, " "); // normalize whitespace
+    rawTitle = rawTitle.replace(/ /g, "_"); // replace whitespace with underscore
+    rawTitle = rawTitle.replace(/[^\p{L}\p{N}_-]/gu, "-"); // replace invalid characters
+    resultName = resultName.replace("{quizSetTitle}", rawTitle);
 
     // process {swapState}
-    const swapStr = info.swapped ? "BS" : "SB"; // BS: big first small later; SB: small first big later (default)
+    const swapStr = info.swapped ? "DT" : "TD"; // DT: Definition - Term, TD: Term - Definition
     resultName = resultName.replace("{swapState}", swapStr);
 
     // process file extension
@@ -85,21 +130,21 @@ function generateFilename(pattern, info, extension) {
 }
 
 // global: data formatting
-async function formatData(payload, format) {
+async function formatData(payload, format, includeImg) {
     if (format === "csv") {
         return {
-            content: generateCSV(payload),
+            content: generateCSV(payload, includeImg),
             mimeType: "text/csv;charset=utf-8",
         };
     } else if (format === "docx") {
-        const blob = await generateDOCX(payload);
+        const blob = await generateDOCX(payload, includeImg);
         return {
             content: blob,
             mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         };
     } else {
         return {
-            content: generateJSON(payload),
+            content: generateJSON(payload, includeImg),
             mimeType: "application/json;charset=utf-8",
         };
     }
@@ -133,8 +178,18 @@ async function downloadFile(content, filename, mimeType) {
     }
 }
 
+// global: combine text and image URL (JSON/CSV)
+function getDefinitionStr(defObj, includeImg) {
+    let str = defObj.text || "";
+    if (includeImg && defObj.image) {
+        if (str.length > 0) str += " - ";
+        str += `(${defObj.image})`;
+    }
+    return str;
+}
+
 // global: generate JSON content from payload
-function generateJSON(payload) {
+function generateJSON(payload, includeImg) {
     const cleanString = (str) => {
         if (typeof str !== "string") return str;
         return str.replace(/[ \t\r\f\v]+/g, " ").trim();
@@ -147,15 +202,17 @@ function generateJSON(payload) {
     }
 
     for (const key in newPayload.quizData) {
-        newPayload.quizData[key].partSmall = cleanString(newPayload.quizData[key].partSmall);
-        newPayload.quizData[key].partBig = cleanString(newPayload.quizData[key].partBig);
+        newPayload.quizData[key].termPart = cleanString(newPayload.quizData[key].termPart);
+        const defObj = newPayload.quizData[key].definitionPart;
+        defObj.text = cleanString(defObj.text);
+        newPayload.quizData[key].definitionPart = getDefinitionStr(defObj, includeImg);
     }
 
     return JSON.stringify(newPayload, null, 4);
 }
 
 // global: generate CSV content from payload
-function generateCSV(payload) {
+function generateCSV(payload, includeImg) {
     const info = payload.info;
     const data = payload.quizData;
     const rows = [];
@@ -180,32 +237,34 @@ function generateCSV(payload) {
     rows.push(`Number of Quizzes,${info.numberOfQuizzes}`);
     rows.push(`,`); // empty separator row
 
-    const headerLeft = info.swapped ? "Big Part" : "Small Part";
-    const headerRight = info.swapped ? "Small Part" : "Big Part";
+    const headerLeft = info.swapped ? "Definition Part" : "Term Part";
+    const headerRight = info.swapped ? "Term Part" : "Definition Part";
     rows.push(`${headerLeft},${headerRight}`);
 
     // section data
     const sortedKeys = Object.keys(data).sort();
     sortedKeys.forEach((key) => {
         const item = data[key];
-        if (info.swapped) {
-            rows.push(`${escape(item.partBig)},${escape(item.partSmall)}`); // big first, small later
-        } else {
-            rows.push(`${escape(item.partSmall)},${escape(item.partBig)}`); // small first, big later
-        }
+        const defStr = getDefinitionStr(item.definitionPart, includeImg);
+        const termStr = item.termPart;
+
+        const col1Text = info.swapped ? defStr : termStr;
+        const col2Text = info.swapped ? termStr : defStr;
+
+        rows.push(`${escape(col1Text)},${escape(col2Text)}`);
     });
 
     return rows.join("\n");
 }
 
 // global: generate DOCX content from payload
-async function generateDOCX(payload) {
+async function generateDOCX(payload, includeImg) {
     // check if docx library is loaded
     if (typeof docx === "undefined") {
         throw new Error("DOCX library not loaded");
     }
 
-    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, BorderStyle, ExternalHyperlink, AlignmentType } = docx;
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, ExternalHyperlink, AlignmentType, ImageRun, BorderStyle } = docx;
     const info = payload.info;
     const data = payload.quizData;
     const FONT_NAME = "Calibri";
@@ -223,16 +282,7 @@ async function generateDOCX(payload) {
             children: [
                 new TextRun({ text: key, bold: true, size: 24, font: FONT_NAME }),
                 new ExternalHyperlink({
-                    children: [
-                        new TextRun({
-                            text: value,
-                            style: "Hyperlink",
-                            size: 24,
-                            font: FONT_NAME,
-                            color: "0563C1",
-                            underline: { type: "single" },
-                        }),
-                    ],
+                    children: [new TextRun({ text: value, style: "Hyperlink", size: 24, font: FONT_NAME, color: "0563C1", underline: { type: "single" } })],
                     link: value,
                 }),
             ],
@@ -252,28 +302,18 @@ async function generateDOCX(payload) {
 
     // section data
     // header row
-    const headerLeft = info.swapped ? "Big Part" : "Small Part";
-    const headerRight = info.swapped ? "Small Part" : "Big Part";
+    const headerLeft = info.swapped ? "Definition Part" : "Term Part";
+    const headerRight = info.swapped ? "Term Part" : "Definition Part";
 
     const tableRows = [
         new TableRow({
             children: [
                 new TableCell({
-                    children: [
-                        new Paragraph({
-                            children: [new TextRun({ text: headerLeft, bold: true, size: 24, font: FONT_NAME })],
-                            alignment: AlignmentType.CENTER,
-                        }),
-                    ],
+                    children: [new Paragraph({ children: [new TextRun({ text: headerLeft, bold: true, size: 24, font: FONT_NAME })], alignment: AlignmentType.CENTER })],
                     width: { size: 30, type: WidthType.PERCENTAGE },
                 }),
                 new TableCell({
-                    children: [
-                        new Paragraph({
-                            children: [new TextRun({ text: headerRight, bold: true, size: 24, font: FONT_NAME })],
-                            alignment: AlignmentType.CENTER,
-                        }),
-                    ],
+                    children: [new Paragraph({ children: [new TextRun({ text: headerRight, bold: true, size: 24, font: FONT_NAME })], alignment: AlignmentType.CENTER })],
                     width: { size: 70, type: WidthType.PERCENTAGE },
                 }),
             ],
@@ -286,43 +326,69 @@ async function generateDOCX(payload) {
 
         const lines = text.split("\n");
         return lines.map((line, index) => {
-            return new TextRun({
-                text: line,
-                break: index > 0 ? 1 : 0,
-                size: size,
-                bold: bold,
-                font: FONT_NAME,
-            });
+            return new TextRun({ text: line, break: index > 0 ? 1 : 0, size: size, bold: bold, font: FONT_NAME });
         });
     };
 
-    const sortedKeys = Object.keys(data).sort();
-    sortedKeys.forEach((key) => {
-        const item = data[key];
-        const col1Text = info.swapped ? item.partBig : item.partSmall;
-        const col2Text = info.swapped ? item.partSmall : item.partBig;
+    const fetchImage = async (url) => {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) return null;
+            return await response.arrayBuffer();
+        } catch (error) {
+            console.warn("Failed to fetch image:", url, error);
+            return null;
+        }
+    };
 
-        tableRows.push(
-            new TableRow({
-                children: [
-                    new TableCell({
-                        children: [
-                            new Paragraph({
-                                children: createTextRunsWithNewlines(col1Text, 22),
-                            }),
-                        ],
-                    }),
-                    new TableCell({
-                        children: [
-                            new Paragraph({
-                                children: createTextRunsWithNewlines(col2Text, 22),
-                            }),
-                        ],
-                    }),
-                ],
-            })
-        );
-    });
+    const sortedKeys = Object.keys(data).sort();
+    for (const key of sortedKeys) {
+        const item = data[key];
+
+        // content term text
+        const termCellChildren = [new Paragraph({ children: createTextRunsWithNewlines(item.termPart, 22) })];
+
+        // content definition text
+        const defCellChildren = [new Paragraph({ children: createTextRunsWithNewlines(item.definitionPart.text, 22) })];
+
+        // content definition image
+        if (includeImg && item.definitionPart.image) {
+            const imageBuffer = await fetchImage(item.definitionPart.image);
+            if (imageBuffer) {
+                defCellChildren.push(new Paragraph({ text: "", spacing: { before: 100 } }));
+
+                const imgRun = new ImageRun({ data: imageBuffer, transformation: { width: 200, height: 150 } });
+                const linkedImage = new ExternalHyperlink({ children: [imgRun], link: item.definitionPart.image });
+                const imageTable = new Table({
+                    rows: [
+                        new TableRow({
+                            children: [
+                                new TableCell({
+                                    children: [new Paragraph({ children: [linkedImage], alignment: AlignmentType.CENTER })],
+                                    margins: { top: 0, bottom: 0, left: 0, right: 0 },
+                                    borders: {
+                                        top: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+                                        bottom: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+                                        left: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+                                        right: { style: BorderStyle.SINGLE, size: 6, color: "000000" },
+                                    },
+                                }),
+                            ],
+                        }),
+                    ],
+                    width: { size: 100, type: WidthType.PERCENTAGE },
+                });
+
+                defCellChildren.push(imageTable);
+            }
+        }
+
+        // handle swap position
+        const cell1Children = info.swapped ? defCellChildren : termCellChildren;
+        const cell2Children = info.swapped ? termCellChildren : defCellChildren;
+
+        tableRows.push(new TableRow({ children: [new TableCell({ children: cell1Children }), new TableCell({ children: cell2Children })] }));
+    }
 
     const table = new Table({
         rows: tableRows,

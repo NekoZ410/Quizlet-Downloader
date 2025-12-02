@@ -215,7 +215,7 @@
                     <h4 class="type">
                         Filename Pattern:
                         <button class="btn-guide"
-                            title="Custom placeholder:&#10;- {quizSetTitle}: quiz set title&#10;- {swapState}: Small part/big part swapping order&#10;&#10;This project use 'moment-with-locales.js' version,&#10;visit https://momentjs.com/docs/ for more information"
+                            title="Custom placeholder:&#10;- {quizSetTitle}: quiz set title&#10;- {swapState}: Term/Definition part order swapping state&#10;&#10;This project use 'moment-with-locales.js' version,&#10;visit https://momentjs.com/docs/ for more information"
                             disabled><i class="fa-solid fa-info"></i></button>
                     </h4>
                     <div class="group-segment-input">
@@ -225,16 +225,22 @@
                     <br>
 
                     <div class="group-segment-item">
-                        <span style="margin: 0 0 0 2em">Output Format:</span>
-                        <select id="qd-outFileNameExt">
+                        <input type="checkbox" id="qd-enableCustomFormat">
+                        <span style="margin-right: 5px;">Enable Custom Format:</span>
+                        
+                        <select id="qd-outFileNameExt" disabled>
                             <option value="json">JSON</option>
                             <option value="csv">CSV</option>
                             <option value="docx">DOCX</option>
                         </select>
+                        <button class="btn-guide" title="Default: JSON" disabled><i class="fa-solid fa-info"></i></button>
                     </div>
                     <div class="group-segment-item">
-                        <input type="checkbox" id="qd-outFileContentOrder">Swap small part/big part position
-                        <button class="btn-guide" title="Default: false (small first, big later)" disabled><i class="fa-solid fa-info"></i></button>
+                        <input type="checkbox" id="qd-outFileContentOrder">Swap Term/Definition order
+                        <button class="btn-guide" title="Default: false (Term - Definition)" disabled><i class="fa-solid fa-info"></i></button>
+                    </div>
+                    <div class="group-segment-item">
+                        <input type="checkbox" id="qd-outFileIncludeImage" checked>Include images (if available)
                     </div>
                     <br>
 

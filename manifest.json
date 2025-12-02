@@ -3,8 +3,8 @@
     "name": "Quizlet Downloader",
     "version": "1.0.0",
     "description": "Scraping content from Quizlet and saving it locally.",
-    "homepage_url": "https://github.com/NekoZ410/quizlet-downloader",
-    "permissions": ["activeTab", "scripting", "downloads"],
+    "homepage_url": "https://github.com/NekoZ410/Quizlet-Downloader",
+    "permissions": ["activeTab", "scripting", "downloads", "storage"],
     "host_permissions": ["https://quizlet.com/*"],
     "action": {
         "default_popup": "popup.html",
