@@ -215,19 +215,19 @@
                     <h4 class="type">
                         Filename Pattern:
                         <button class="btn-guide"
-                            title="Custom placeholder:&#10;- {quizSetTitle}: quiz set title&#10;- {swapState}: Term/Definition part order swapping state&#10;&#10;This project use 'moment-with-locales.js' version,&#10;visit https://momentjs.com/docs/ for more information"
+                            title="Custom placeholder:&#10;- [text go here]: Escaped text &#10;- {quizSetTitle}: Quiz set title&#10;- {swapState}: Term/Definition part order swapping state&#10;- {counts}: Total number of quizzes&#10;&#10;This project use 'moment-with-locales.js' library for date formatting,&#10;visit https://momentjs.com/docs/ for more information"
                             disabled><i class="fa-solid fa-info"></i></button>
                     </h4>
                     <div class="group-segment-input">
-                        <input id="qd-outFileNamePattern" class="input-full" value="{quizSetTitle}_YYYY-MM-DD_HH-mm-ss_{swapState}"
-                            placeholder="Default: {quizSetTitle}_YYYY-MM-DD_HH-mm-ss_{swapState}" />
+                        <input id="qd-outFileNamePattern" class="input-full" value="[Quizlet]_{quizSetTitle}_{counts}[Q]_{swapState}_YYYY-MM-DD_HH-mm-ss"
+                            placeholder="Default: [Quizlet]_{quizSetTitle}_{counts}[Q]_{swapState}_YYYY-MM-DD_HH-mm-ss" />
                     </div>
                     <br>
 
                     <div class="group-segment-item">
                         <input type="checkbox" id="qd-enableCustomFormat">
                         <span style="margin-right: 5px;">Enable Custom Format:</span>
-                        
+
                         <select id="qd-outFileNameExt" disabled>
                             <option value="json">JSON</option>
                             <option value="csv">CSV</option>

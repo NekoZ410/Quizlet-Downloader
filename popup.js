@@ -85,7 +85,7 @@ if (scrapeBtn) {
                 const payload = response.payload;
                 const outputFormat = formatEnableCheckbox.checked ? formatSelect.value : "json";
 
-                const filenamePattern = filenameInput ? filenameInput.value : "{quizSetTitle}_YYYY-MM-DD_HH-mm-ss_{swapState}";
+                const filenamePattern = filenameInput ? filenameInput.value : "[Quizlet]_{quizSetTitle}_{counts}[Q]_{swapState}_YYYY-MM-DD_HH-mm-ss";
                 const finalFilename = generateFilename(filenamePattern, payload.info, outputFormat);
 
                 const { content, mimeType } = await formatData(payload, outputFormat, includeImg);
@@ -94,7 +94,7 @@ if (scrapeBtn) {
                 scrapeStatus.textContent = `Done! Found ${payload.info.numberOfQuizzes} quizzes.`;
                 scrapeStatus.style.color = "forestgreen";
             } else {
-                scrapeStatus.textContent = "Error: No data found or script failed.";
+                scrapeStatus.textContent = `Error: ${response.message || "No data found or script failed."}`;
                 scrapeStatus.style.color = "crimson";
             }
         } catch (error) {
@@ -107,19 +107,24 @@ if (scrapeBtn) {
 
 // global: generate filename based on pattern
 function generateFilename(pattern, info, extension) {
-    const protectedPattern = pattern.replace(/(\{.*?\})/g, "[$1]"); // avoid moment.js formatting placeholder
-    let resultName = moment().format(protectedPattern);
+    let tempPattern = pattern;
 
     // process {quizSetTitle}
     let rawTitle = info.quizSetTitle || "quizlet_set";
     rawTitle = rawTitle.replace(/\s+/g, " "); // normalize whitespace
     rawTitle = rawTitle.replace(/ /g, "_"); // replace whitespace with underscore
     rawTitle = rawTitle.replace(/[^\p{L}\p{N}_-]/gu, "-"); // replace invalid characters
-    resultName = resultName.replace("{quizSetTitle}", rawTitle);
+    tempPattern = tempPattern.replace("{quizSetTitle}", `[${rawTitle}]`);
+
+    // process {counts}
+    tempPattern = tempPattern.replace("{counts}", `[${info.numberOfQuizzes}]`);
 
     // process {swapState}
     const swapStr = info.swapped ? "DT" : "TD"; // DT: Definition - Term, TD: Term - Definition
-    resultName = resultName.replace("{swapState}", swapStr);
+    tempPattern = tempPattern.replace("{swapState}", `[${swapStr}]`);
+
+    // format date
+    let resultName = moment().format(tempPattern);
 
     // process file extension
     if (!resultName.toLowerCase().endsWith("." + extension)) {
