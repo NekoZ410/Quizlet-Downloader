@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Quizlet Downloader",
-    "version": "1.2.2",
+    "version": "1.2.3",
     "description": "Scraping content from Quizlet and saving it locally.",
     "homepage_url": "https://github.com/NekoZ410/Quizlet-Downloader",
     "permissions": ["activeTab", "scripting", "downloads", "storage"],
@@ -10,7 +10,8 @@
         "default_popup": "popup.html",
         "default_icon": {
             "16": "images/icons/icon16.png",
-            "64": "images/icons/icon64.png",
+            "32": "images/icons/icon32.png",
+            "48": "images/icons/icon64.png",
             "128": "images/icons/icon128.png"
         }
     },
